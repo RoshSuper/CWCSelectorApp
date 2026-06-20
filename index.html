@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CWC Exhibition — Selector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --clay:       #3D2B1F;
+    --terracotta: #C1622B;
+    --sage:       #7A8C6E;
+    --sand:       #EDE8DF;
+    --paper:      #FAF8F5;
+    --smoke:      #F2EDE6;
+    --muted:      #8C7B72;
+    --border:     #D9D1C7;
+    --yes:        #4A7C5A;
+    --no:         #9C3B2A;
+    --maybe:      #7A6E3D;
+    --yes-bg:     #E8F3EC;
+    --no-bg:      #F5E8E6;
+    --maybe-bg:   #F3F0E3;
+    --radius:     12px;
+    --radius-sm:  8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--paper);
+    color: var(--clay);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    overscroll-behavior: none;
+  }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; padding: 32px 24px;
+    background: var(--clay);
+  }
+  .login-logo {
+    width: 64px; height: 64px; background: var(--terracotta);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px; font-size: 28px;
+  }
+  .login-title {
+    font-family: 'DM Serif Display', serif; font-size: 26px;
+    color: var(--sand); text-align: center; margin-bottom: 6px;
+  }
+  .login-sub {
+    font-size: 13px; color: var(--muted); text-align: center;
+    margin-bottom: 40px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .login-form { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+  .login-form input {
+    width: 100%; padding: 14px 16px; border-radius: var(--radius-sm);
+    border: 1.5px solid #5A3E30; background: #2A1D14;
+    color: var(--sand); font-family: 'Inter', sans-serif; font-size: 15px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .login-form input::placeholder { color: #6B4E3D; }
+  .login-form input:focus { border-color: var(--terracotta); }
+  .login-btn {
+    padding: 15px; border-radius: var(--radius-sm); border: none;
+    background: var(--terracotta); color: white; font-family: 'Inter', sans-serif;
+    font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 6px; transition: opacity 0.2s;
+  }
+  .login-btn:active { opacity: 0.8; }
+  .login-error { color: #E8897A; font-size: 13px; text-align: center; min-height: 18px; }
+
+  /* ── MAIN APP ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 100; background: var(--clay);
+    padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+    min-height: 54px;
+  }
+  .topbar-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--sand); }
+  .topbar-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .topbar-name { color: var(--sand); font-weight: 600; font-size: 13px; }
+  .logout-btn {
+    background: none; border: none; color: var(--terracotta);
+    font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; padding: 0;
+  }
+
+  /* sync badge */
+  .sync-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500; line-height: 1;
+  }
+  .sync-badge.synced  { color: var(--sage); }
+  .sync-badge.syncing { color: #C1622B; }
+  .sync-badge.error   { color: #C0392B; }
+  .sync-badge.local   { color: var(--muted); }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .sync-badge.syncing .sync-dot { animation: blink 0.7s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+  /* tab bar */
+  .tabbar {
+    display: flex; background: var(--smoke); border-bottom: 1px solid var(--border);
+    position: sticky; top: 54px; z-index: 99;
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 6px; border: none; background: none;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border-bottom: 3px solid transparent;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { color: var(--clay); border-bottom-color: var(--terracotta); }
+  .tab-count {
+    font-size: 11px; font-weight: 600; border-radius: 10px;
+    padding: 1px 8px; min-width: 24px; text-align: center; transition: background 0.15s;
+  }
+  .tab-btn.active .tab-count     { background: var(--clay); color: white; }
+  .tab-btn:not(.active) .tab-count { background: var(--border); color: var(--muted); }
+
+  /* generic state card */
+  .state-card {
+    margin: 40px 20px; padding: 32px 24px; background: var(--smoke);
+    border-radius: var(--radius); text-align: center;
+  }
+  .state-icon  { font-size: 36px; margin-bottom: 12px; }
+  .state-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 8px; }
+  .state-sub   { font-size: 14px; color: var(--muted); line-height: 1.55; }
+
+  /* ── SETTINGS ── */
+  .config-screen { padding: 24px 20px 100px; }
+  .config-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
+  .config-sub   { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.55; }
+  .config-section-head {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); margin: 28px 0 14px; padding-bottom: 7px; border-bottom: 1px solid var(--border);
+  }
+  .config-label {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px; display: block;
+  }
+  .config-input {
+    width: 100%; padding: 13px 14px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: white;
+    font-family: 'Inter', sans-serif; font-size: 14px; color: var(--clay);
+    outline: none; margin-bottom: 14px; transition: border-color 0.2s;
+    word-break: break-all;
+  }
+  .config-input:focus { border-color: var(--terracotta); }
+  .config-btn {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm); border: none;
+    background: var(--terracotta); color: white; font-family: 'Inter', sans-serif;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-bottom: 12px;
+    display: block;
+  }
+  .config-btn:active  { opacity: 0.8; }
+  .config-btn:disabled { opacity: 0.45; cursor: default; }
+  .config-btn.secondary {
+    background: var(--smoke); color: var(--clay); border: 1.5px solid var(--border);
+  }
+  .config-btn.danger {
+    background: transparent; color: var(--no); border: 1.5px solid var(--no);
+  }
+
+  /* proxy status pill */
+  .proxy-pill {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    background: var(--smoke); border: 1.5px solid var(--border); margin-bottom: 14px;
+  }
+  .proxy-pill-icon  { font-size: 20px; flex-shrink: 0; }
+  .proxy-pill-body  { flex: 1; min-width: 0; }
+  .proxy-pill-label { font-size: 13px; font-weight: 600; color: var(--clay); }
+  .proxy-pill-url   { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .config-hint {
+    font-size: 12px; color: var(--muted); line-height: 1.7;
+    background: var(--smoke); border-radius: var(--radius-sm);
+    padding: 14px 16px; border-left: 3px solid var(--terracotta); margin-top: 4px;
+  }
+  .config-hint strong { color: var(--clay); }
+  .config-hint ol { padding-left: 18px; margin-top: 6px; }
+  .config-hint li { margin-bottom: 5px; }
+  .config-hint code {
+    font-family: monospace; font-size: 11px; background: var(--border);
+    padding: 1px 5px; border-radius: 3px; color: var(--clay);
+  }
+
+  /* ── WORK CARDS ── */
+  .works-list { padding: 16px 16px 100px; display: flex; flex-direction: column; gap: 16px; }
+  .empty-list { padding: 60px 24px; text-align: center; color: var(--muted); font-size: 15px; }
+  .empty-list .emoji { font-size: 40px; display: block; margin-bottom: 12px; }
+
+  .work-card {
+    background: white; border-radius: var(--radius);
+    border: 1px solid var(--border); overflow: hidden;
+    box-shadow: 0 1px 4px rgba(61,43,31,0.07);
+  }
+
+  /* hero */
+  .work-hero {
+    width: 100%; aspect-ratio: 4/3; object-fit: cover;
+    display: block; background: var(--sand); cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .work-hero-placeholder {
+    width: 100%; aspect-ratio: 4/3; background: var(--sand);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px; color: var(--border);
+  }
+
+  /* thumb strip */
+  .thumb-strip {
+    display: flex; gap: 6px; padding: 8px 12px 4px;
+    overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--sand);
+  }
+  .thumb-strip::-webkit-scrollbar { display: none; }
+  .thumb {
+    flex-shrink: 0; width: 58px; height: 58px; border-radius: 6px;
+    object-fit: cover; cursor: pointer; border: 2px solid transparent;
+    background: var(--sand); transition: border-color 0.15s;
+  }
+  .thumb.active-thumb { border-color: var(--terracotta); }
+
+  /* card body */
+  .work-body { padding: 14px 16px 10px; }
+  .work-cat-badge {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--sage); background: #EFF3EC; border-radius: 4px;
+    padding: 2px 8px; margin-bottom: 8px; display: inline-block;
+  }
+  .work-title {
+    font-family: 'DM Serif Display', serif; font-size: 20px;
+    color: var(--clay); margin-bottom: 4px; line-height: 1.25;
+  }
+  .work-dims { font-size: 12px; color: var(--muted); margin-bottom: 10px; letter-spacing: 0.01em; }
+  .work-desc {
+    font-size: 14px; color: #5C4840; line-height: 1.6;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .work-desc.expanded { -webkit-line-clamp: unset; }
+  .read-more {
+    font-size: 12px; color: var(--terracotta); font-weight: 600;
+    cursor: pointer; border: none; background: none;
+    padding: 6px 0 2px; font-family: 'Inter', sans-serif; display: block;
+  }
+
+  /* vote strip */
+  .vote-strip { display: flex; border-top: 1px solid var(--sand); }
+  .vote-btn {
+    flex: 1; padding: 13px 4px; border: none; border-right: 1px solid var(--sand);
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: white; color: var(--muted); transition: background 0.12s, color 0.12s;
+  }
+  .vote-btn:last-child { border-right: none; }
+  .vicon { font-size: 16px; line-height: 1; }
+  .vote-btn:active { transform: scale(0.94); }
+
+  .vote-btn.vote-yes:not(.selected):active   { background: var(--yes-bg);   color: var(--yes); }
+  .vote-btn.vote-no:not(.selected):active    { background: var(--no-bg);    color: var(--no); }
+  .vote-btn.vote-maybe:not(.selected):active { background: var(--maybe-bg); color: var(--maybe); }
+
+  .vote-btn.selected.yes-sel   { background: var(--yes);   color: white; }
+  .vote-btn.selected.no-sel    { background: var(--no);    color: white; }
+  .vote-btn.selected.maybe-sel { background: var(--maybe); color: white; }
+
+  /* voted footer */
+  .voted-footer {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 14px 10px; border-top: 1px solid var(--sand);
+  }
+  .voted-chip {
+    font-size: 11px; font-weight: 600; border-radius: 20px; padding: 3px 10px;
+  }
+  .voted-chip.yes   { background: var(--yes-bg);   color: var(--yes); }
+  .voted-chip.no    { background: var(--no-bg);    color: var(--no); }
+  .voted-chip.maybe { background: var(--maybe-bg); color: var(--maybe); }
+  .voted-change { font-size: 11px; color: var(--muted); }
+
+  /* save indicator */
+  .save-row {
+    padding: 4px 14px 8px; font-size: 11px; color: var(--muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  /* ── LIGHTBOX ── */
+  #lightbox {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.93); flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 96%; max-height: 83vh; object-fit: contain; border-radius: 6px; transition: opacity 0.2s; }
+  .lb-close {
+    position: absolute; top: 16px; right: 20px; background: rgba(255,255,255,0.14);
+    border: none; color: white; font-size: 20px; width: 40px; height: 40px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .lb-caption { color: rgba(255,255,255,0.55); font-size: 13px; margin-top: 12px; text-align: center; padding: 0 24px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--clay); color: var(--sand);
+    padding: 11px 22px; border-radius: 24px; font-size: 14px; font-weight: 500;
+    white-space: nowrap; z-index: 500; transition: transform 0.28s ease; pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════ LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">🏺</div>
+  <h1 class="login-title">Ceramics Western Cape</h1>
+  <p class="login-sub">Annual Exhibition — Selector Portal</p>
+  <div class="login-form">
+    <input type="email"    id="login-email" placeholder="Email address"  autocomplete="email">
+    <input type="password" id="login-pwd"   placeholder="Password"       autocomplete="current-password">
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ APP -->
+<div id="app">
+  <div class="topbar">
+    <span class="topbar-title">🏺 CWC Exhibition</span>
+    <div class="topbar-right">
+      <span class="topbar-name" id="topbar-name"></span>
+      <span class="sync-badge local" id="sync-badge">
+        <span class="sync-dot"></span><span id="sync-text">Local only</span>
+      </span>
+      <button class="logout-btn" id="logout-btn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab-btn active" data-tab="todo" id="tab-todo">
+      To Do <span class="tab-count" id="count-todo">0</span>
+    </button>
+    <button class="tab-btn" data-tab="done" id="tab-done">
+      Done <span class="tab-count" id="count-done">0</span>
+    </button>
+    <button class="tab-btn" data-tab="settings" id="tab-settings">
+      Settings <span class="tab-count" style="visibility:hidden">·</span>
+    </button>
+  </div>
+
+  <div id="panel-todo"><div id="list-todo" class="works-list"></div></div>
+  <div id="panel-done"     style="display:none"><div id="list-done"     class="works-list"></div></div>
+  <div id="panel-settings" style="display:none">
+    <div class="config-screen">
+      <h2 class="config-title">Settings</h2>
+
+      <!-- ── PROXY SECTION ── -->
+      <div class="config-section-head">Apps Script Write-back</div>
+      <div id="proxy-connected" style="display:none">
+        <div class="proxy-pill">
+          <span class="proxy-pill-icon">✅</span>
+          <div class="proxy-pill-body">
+            <div class="proxy-pill-label">Write-back connected</div>
+            <div class="proxy-pill-url" id="proxy-url-display"></div>
+          </div>
+        </div>
+        <button class="config-btn danger" id="proxy-disconnect-btn">Disconnect</button>
+      </div>
+      <div id="proxy-disconnected">
+        <label class="config-label" for="proxy-url-input">Apps Script Web App URL</label>
+        <input class="config-input" id="proxy-url-input" placeholder="https://script.google.com/macros/s/…/exec" type="url">
+        <button class="config-btn" id="test-proxy-btn">Save & Test Connection</button>
+        <div class="config-hint">
+          <strong>How to set up write-back (one-time, ~3 minutes):</strong>
+          <ol>
+            <li>Open your Google Sheet → <strong>Extensions → Apps Script</strong></li>
+            <li>Delete any existing code and paste in the contents of <code>cwc-proxy.gs</code></li>
+            <li>Click <strong>Save</strong>, then <strong>Deploy → New deployment</strong></li>
+            <li>Type: <em>Web app</em> · Execute as: <em>Me</em> · Who has access: <em>Anyone</em></li>
+            <li>Click <strong>Deploy</strong>, authorise when prompted, then copy the Web App URL and paste it above</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- ── SHEET SECTION ── -->
+      <div class="config-section-head">Spreadsheet</div>
+      <label class="config-label" for="sheet-id-input">Google Sheet ID</label>
+      <input class="config-input" id="sheet-id-input" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" type="text">
+      <button class="config-btn" id="load-sheet-btn">Load Entries from Sheet</button>
+      <button class="config-btn secondary" id="demo-btn">Use Demo Data</button>
+      <div class="config-hint" style="margin-top:8px">
+        <strong>Sheet ID</strong> is the string between <code>/d/</code> and <code>/edit</code> in the spreadsheet URL. The sheet must be shared so <em>anyone with the link can view</em> (for reading). Write-back uses the Apps Script above and works regardless of sharing settings.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ LIGHTBOX -->
+<div id="lightbox">
+  <button class="lb-close" id="lb-close">✕</button>
+  <img id="lb-img" src="" alt="">
+  <div class="lb-caption" id="lb-caption"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+const STATE = {
+  user:     null,   // { number, name, email, password, key }
+  works:    [],     // flat array — one card per work
+  votes:    {},     // { workId: 0|1|2 }
+  sheetId:  '',
+  proxyUrl: '',     // Apps Script Web App URL
+  syncQueue: [],
+  syncing:   false,
+};
+
+const VOTE_LABELS = { 2:'yes', 0:'no', 1:'maybe' };
+const VOTE_ICONS  = { yes:'✓', no:'✕', maybe:'~' };
+
+// Selectors — overwritten when sheet is loaded
+let SELECTORS = [
+  { number:1, name:'Madoda',    email:'madoda@gmail.com',        password:'madoda',    key:'Selector1Score' },
+  { number:2, name:'Sylvester', email:'s.mqeku@gmail.com',       password:'sylvester', key:'Selector2Score' },
+  { number:3, name:'Amo',       email:'amo@gmail.com',           password:'amo',       key:'Selector3Score' },
+  { number:4, name:'Rosh',      email:'nirvanafynbos@gmail.com', password:'rosh',      key:'Selector4Score' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  PERSISTENCE  (localStorage)
+// ═══════════════════════════════════════════════════════════════
+function saveLocal() {
+  try {
+    if (STATE.user) localStorage.setItem(`cwc_votes_${STATE.user.email}`, JSON.stringify(STATE.votes));
+    localStorage.setItem('cwc_sheet_id',  STATE.sheetId);
+    localStorage.setItem('cwc_proxy_url', STATE.proxyUrl);
+  } catch(e) {}
+}
+
+function loadLocal() {
+  try {
+    STATE.sheetId  = localStorage.getItem('cwc_sheet_id')  || '';
+    STATE.proxyUrl = localStorage.getItem('cwc_proxy_url') || '';
+    if (STATE.user) {
+      const v = localStorage.getItem(`cwc_votes_${STATE.user.email}`);
+      STATE.votes = v ? JSON.parse(v) : {};
+    }
+    document.getElementById('sheet-id-input').value  = STATE.sheetId;
+    document.getElementById('proxy-url-input').value = STATE.proxyUrl;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PROXY — Apps Script write-back
+// ═══════════════════════════════════════════════════════════════
+
+// Test: send a ping action; script returns {status:'ok'}
+async function testProxy(url) {
+  const r = await fetch(url + '?action=ping', { method:'GET' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.status !== 'ok') throw new Error(j.error || 'Unexpected response');
+}
+
+// Write a single vote:  POST {action, sheetId, row, col, value, selectorKey}
+async function writeVote(work, value) {
+  if (!STATE.proxyUrl) return;
+  const url = STATE.proxyUrl;
+  const body = {
+    action:      'writeVote',
+    sheetId:     STATE.sheetId,
+    rowIndex:    work.rowIndex,        // 1-based sheet row
+    selectorKey: STATE.user.key,       // e.g. "Selector2Score"
+    value:       value,
+  };
+  const r = await fetch(url, {
+    method:  'POST',
+    // Apps Script requires text/plain to avoid CORS preflight on no-cors
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.status !== 'ok') throw new Error(j.error || 'Write failed');
+}
+
+// Queue-based so rapid taps don't race
+function queueWrite(work, value) {
+  STATE.syncQueue = STATE.syncQueue.filter(q => q.work.workId !== work.workId);
+  STATE.syncQueue.push({ work, value });
+  if (!STATE.syncing) flushQueue();
+}
+
+async function flushQueue() {
+  if (STATE.syncing || !STATE.syncQueue.length || !STATE.proxyUrl) return;
+  STATE.syncing = true;
+  setSyncState('syncing');
+  while (STATE.syncQueue.length) {
+    const { work, value } = STATE.syncQueue.shift();
+    try {
+      await writeVote(work, value);
+    } catch(e) {
+      console.error('Write-back error:', e);
+      setSyncState('error', 'Sync error');
+      STATE.syncing = false;
+      return;
+    }
+  }
+  setSyncState('synced', 'Synced');
+  STATE.syncing = false;
+}
+
+function setSyncState(state, label) {
+  const badge = document.getElementById('sync-badge');
+  badge.className = `sync-badge ${state}`;
+  document.getElementById('sync-text').textContent = label ||
+    ({ synced:'Synced', syncing:'Saving…', error:'Sync error', local:'Local only' }[state] || state);
+}
+
+function updateProxyUI() {
+  const connected = !!STATE.proxyUrl;
+  document.getElementById('proxy-connected').style.display    = connected ? '' : 'none';
+  document.getElementById('proxy-disconnected').style.display = connected ? 'none' : '';
+  if (connected) {
+    const short = STATE.proxyUrl.length > 50
+      ? STATE.proxyUrl.slice(0,40) + '…' + STATE.proxyUrl.slice(-10)
+      : STATE.proxyUrl;
+    document.getElementById('proxy-url-display').textContent = short;
+    setSyncState('synced', 'Synced');
+  } else {
+    setSyncState('local', 'Local only');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  READ FROM GOOGLE SHEETS  (public read via API key — no auth needed for viewing)
+//  Falls back to proxy read if sheet is private
+// ═══════════════════════════════════════════════════════════════
+async function loadFromSheet(sheetId) {
+  // We read via the Apps Script proxy so the sheet doesn't need to be public
+  if (STATE.proxyUrl) {
+    return loadViaProxy(sheetId);
+  }
+  // Fallback: public sheet read (sheet must be "anyone with link can view")
+  return loadViaPublicApi(sheetId);
+}
+
+async function loadViaProxy(sheetId) {
+  const url = `${STATE.proxyUrl}?action=readSheet&sheetId=${encodeURIComponent(sheetId)}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Proxy read error: HTTP ${r.status}`);
+  const j = await r.json();
+  if (j.status !== 'ok') throw new Error(j.error || 'Read failed');
+  if (j.selectors) {
+    SELECTORS = j.selectors;
+  }
+  return parseRows(j.rows, j.headers);
+}
+
+async function loadViaPublicApi(sheetId) {
+  // Uses a public read-only approach: export as CSV
+  const csvUrl = (tab) =>
+    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+
+  const [r1, r2] = await Promise.all([
+    fetch(csvUrl('Form Responses')),
+    fetch(csvUrl('Selectors')).catch(() => null),
+  ]);
+  if (!r1.ok) throw new Error(`Could not read sheet (HTTP ${r1.status}). Make sure it is shared as "Anyone with the link can view", or set up the Apps Script proxy.`);
+
+  const csv1 = await r1.text();
+  const csv2 = r2 && r2.ok ? await r2.text() : null;
+
+  if (csv2) {
+    const selRows = parseCSV(csv2);
+    if (selRows.length > 1) {
+      const sh = selRows[0];
+      const idx = k => sh.indexOf(k);
+      SELECTORS = selRows.slice(1).map(row => {
+        const num = parseInt(row[idx('SelectorNumber')]) || 0;
+        return { number:num, name:row[idx('Name')]||'', email:(row[idx('Email')]||'').toLowerCase().trim(), password:row[idx('Password')]||'', key:`Selector${num}Score` };
+      }).filter(s => s.number > 0);
+    }
+  }
+
+  const rows = parseCSV(csv1);
+  const headers = rows[0] || [];
+  return parseRows(rows.slice(1), headers);
+}
+
+// Minimal CSV parser (handles quoted fields with commas/newlines)
+function parseCSV(text) {
+  const rows = []; let row = []; let cell = ''; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"' && text[i+1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') inQ = false;
+      else cell += ch;
+    } else {
+      if (ch === '"') inQ = true;
+      else if (ch === ',') { row.push(cell); cell = ''; }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (ch === '\r') { /* skip */ }
+      else cell += ch;
+    }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+
+function parseRows(dataRows, headers) {
+  const col = name => headers.indexOf(name);
+
+  function parseImages(raw) {
+    if (!raw) return [];
+    return raw.split(',').map(u => u.trim()).filter(Boolean).map(url => {
+      const m = url.match(/[?&/]id=([\w-]+)/);
+      if (m) return {
+        thumb: `https://drive.google.com/thumbnail?id=${m[1]}&sz=w600`,
+        full:  `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600`,
+      };
+      return { thumb: url, full: url };
+    });
+  }
+
+  const works = [];
+  dataRows.forEach((row, ri) => {
+    const g = c => (row[col(c)] || '').trim();
+    const rowIndex = ri + 2; // sheet row (1-based; row 1 = header)
+    const category = g('Entry Awards Category');
+    for (let w = 1; w <= 3; w++) {
+      const title = g(`Entry ${w}: Title of Work`);
+      if (!title) continue;
+      works.push({
+        workId:    `${ri}_${w}`,
+        rowIndex,
+        category,
+        title,
+        description: g(`Entry ${w}: Description of Work & Artist Statement`),
+        dimensions:  g(`Entry ${w}: Dimensions (centimeters)`),
+        images:      parseImages(g(`Upload images of Entry ${w}`)),
+      });
+    }
+  });
+  return works;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DEMO DATA
+// ═══════════════════════════════════════════════════════════════
+function parseDemoData() {
+  const imgs = [
+    { thumb:'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=80', full:'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=600&q=80', full:'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?w=600&q=80', full:'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=600&q=80', full:'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1493106641515-5cd81a0be6c9?w=600&q=80', full:'https://images.unsplash.com/photo-1493106641515-5cd81a0be6c9?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1594913428515-1bcc9fef1b72?w=600&q=80', full:'https://images.unsplash.com/photo-1594913428515-1bcc9fef1b72?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1490312278390-ab64016b5873?w=600&q=80', full:'https://images.unsplash.com/photo-1490312278390-ab64016b5873?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1505022610485-0249ba5b3675?w=600&q=80', full:'https://images.unsplash.com/photo-1505022610485-0249ba5b3675?w=1400&q=90' },
+    { thumb:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', full:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1400&q=90' },
+  ];
+  let i = 0;
+  const pick = (n) => Array.from({length:n}, () => imgs[(i++)%imgs.length]);
+
+  return [
+    { workId:'d0', rowIndex:2, category:'Established',  title:'Coastal Drift',
+      description:'Wheel-thrown stoneware inspired by tidal pools along the Cape coastline. The surface texture uses a resist-slip technique with wax and oxide washes, fired to cone 10 reduction. The form references the pull and release of water on rock.',
+      dimensions:'28 × 14 cm', images:pick(3) },
+    { workId:'d1', rowIndex:2, category:'Established',  title:'Vessel No. 7',
+      description:'Hand-built pinch pot series exploring negative space and the tension between interior and exterior. Unglazed terracotta with a burnished interior. Deliberate asymmetry reflects the impermanence of natural forms.',
+      dimensions:'12 × 12 cm', images:pick(2) },
+    { workId:'d2', rowIndex:3, category:'New Signature', title:'Fynbos Form I',
+      description:'Slab-built sculptural vessel decorated with botanical relief impressions of local fynbos — protea, pincushion, erica. High-fired porcelain with a matte ash glaze that pools beautifully in the impressed details.',
+      dimensions:'34 × 22 cm', images:pick(3) },
+    { workId:'d3', rowIndex:4, category:'Established',  title:'Mountain Series: Rain',
+      description:'Thrown and altered stoneware referencing the profile of the Hex River Mountains after rain. Layered celadon and iron red oxides fired in reduction to cone 10.',
+      dimensions:'18 × 24 cm', images:pick(2) },
+    { workId:'d4', rowIndex:4, category:'Established',  title:'Mountain Series: Mist',
+      description:'Companion piece to Rain. Same form language through a different atmospheric glaze — cool grey-blue layered shino fired in heavy reduction.',
+      dimensions:'18 × 24 cm', images:pick(1) },
+    { workId:'d5', rowIndex:4, category:'Established',  title:'Mountain Series: Light',
+      description:'Third in the series. Golden rutile glaze through cone 10 oxidation. The colour shifts from warm honey in direct light to deep amber in shadow.',
+      dimensions:'18 × 24 cm', images:pick(2) },
+    { workId:'d6', rowIndex:5, category:'New Signature', title:'Ochre & Salt',
+      description:'First work exhibited publicly. Influenced by West Coast ochre cliffs and Overberg salt pans. Soda-fired stoneware — the unpredictable flashing felt the right language for this landscape.',
+      dimensions:'22 × 18 cm', images:pick(2) },
+    { workId:'d7', rowIndex:6, category:'Open',          title:'Untitled Bowl Series',
+      description:'Three nesting bowls exploring the relationship between use and contemplation. Thrown porcelain, oxidised copper glaze. Interiors are left deliberately raw to contrast with the polished rims.',
+      dimensions:'Various, 8–22 cm ⌀', images:pick(1) },
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  VOTES
+// ═══════════════════════════════════════════════════════════════
+function getVote(workId) {
+  const v = STATE.votes[workId];
+  return (v === undefined) ? null : v;
+}
+
+function castVote(work, value) {
+  STATE.votes[work.workId] = value;
+  saveLocal();
+  if (STATE.proxyUrl) queueWrite(work, value);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════════
+function shortCat(cat) {
+  if (!cat) return '';
+  if (/new/i.test(cat))         return 'New Signature';
+  if (/established/i.test(cat)) return 'Established';
+  if (/open/i.test(cat))        return 'Open';
+  return cat.split(' ').slice(0,3).join(' ');
+}
+
+function buildWorkCard(work) {
+  const card = document.createElement('div');
+  card.className = 'work-card';
+  card.dataset.workId = work.workId;
+
+  const vote = getVote(work.workId);
+
+  // ── Hero ──
+  if (work.images && work.images.length > 0) {
+    const hero = document.createElement('img');
+    hero.className = 'work-hero';
+    hero.src = work.images[0].thumb;
+    hero.alt = work.title;
+    hero.dataset.full    = work.images[0].full;
+    hero.dataset.caption = work.title;
+    hero.loading = 'lazy';
+    hero.onerror = function() { this.style.display = 'none'; };
+    card.appendChild(hero);
+
+    if (work.images.length > 1) {
+      const strip = document.createElement('div');
+      strip.className = 'thumb-strip';
+      work.images.forEach((img, idx) => {
+        const t = document.createElement('img');
+        t.className = 'thumb' + (idx === 0 ? ' active-thumb' : '');
+        t.src = img.thumb; t.alt = `Image ${idx+1}`;
+        t.dataset.heroTarget = work.workId;
+        t.dataset.heroThumb  = img.thumb;
+        t.dataset.heroFull   = img.full;
+        t.dataset.caption    = `${work.title} — image ${idx+1}`;
+        t.loading = 'lazy';
+        strip.appendChild(t);
+      });
+      card.appendChild(strip);
+    }
+  } else {
+    const ph = document.createElement('div');
+    ph.className = 'work-hero-placeholder'; ph.textContent = '🏺';
+    card.appendChild(ph);
+  }
+
+  // ── Body ──
+  const body = document.createElement('div');
+  body.className = 'work-body';
+  const desc = work.description || 'No description provided.';
+  const descId = `desc_${work.workId}`;
+  body.innerHTML = `
+    <span class="work-cat-badge">${shortCat(work.category)}</span>
+    <div class="work-title">${work.title}</div>
+    <div class="work-dims">${work.dimensions || '—'}</div>
+    <div class="work-desc" id="${descId}">${desc}</div>
+    ${desc.length > 160 ? `<button class="read-more" data-desc="${descId}">Read more</button>` : ''}
+  `;
+  card.appendChild(body);
+
+  // ── Vote strip ──
+  const vstrip = document.createElement('div');
+  vstrip.className = 'vote-strip';
+  [
+    { val:2, label:'Yes',   cls:'vote-yes',   sel:'yes-sel',   icon:'✓' },
+    { val:1, label:'Maybe', cls:'vote-maybe', sel:'maybe-sel', icon:'~' },
+    { val:0, label:'No',    cls:'vote-no',    sel:'no-sel',    icon:'✕' },
+  ].forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = `vote-btn ${v.cls}${vote === v.val ? ' selected '+v.sel : ''}`;
+    btn.dataset.vote   = v.val;
+    btn.dataset.workId = work.workId;
+    btn.innerHTML = `<span class="vicon">${v.icon}</span>${v.label}`;
+    vstrip.appendChild(btn);
+  });
+  card.appendChild(vstrip);
+
+  // ── Voted footer ──
+  if (vote !== null) {
+    const lbl = VOTE_LABELS[vote];
+    const footer = document.createElement('div');
+    footer.className = 'voted-footer';
+    footer.innerHTML = `
+      <span class="voted-chip ${lbl}">${VOTE_ICONS[lbl]} ${lbl.charAt(0).toUpperCase()+lbl.slice(1)}</span>
+      <span class="voted-change">Tap above to change</span>
+    `;
+    card.appendChild(footer);
+  }
+
+  return card;
+}
+
+function renderList() {
+  const todo = STATE.works.filter(w => getVote(w.workId) === null);
+  const done = STATE.works.filter(w => getVote(w.workId) !== null);
+
+  document.getElementById('count-todo').textContent = todo.length;
+  document.getElementById('count-done').textContent = done.length;
+
+  const listTodo = document.getElementById('list-todo');
+  const listDone = document.getElementById('list-done');
+  listTodo.innerHTML = '';
+  listDone.innerHTML = '';
+
+  if (!STATE.works.length) {
+    listTodo.innerHTML = `<div class="state-card"><div class="state-icon">📂</div><div class="state-title">No entries loaded</div><div class="state-sub">Go to Settings to load the spreadsheet or use demo data.</div></div>`;
+    return;
+  }
+  if (!todo.length) {
+    listTodo.innerHTML = `<div class="empty-list"><span class="emoji">🎉</span>All works voted! See the Done tab.</div>`;
+  } else {
+    todo.forEach(w => listTodo.appendChild(buildWorkCard(w)));
+  }
+  if (!done.length) {
+    listDone.innerHTML = `<div class="empty-list"><span class="emoji">📋</span>No votes cast yet.</div>`;
+  } else {
+    done.forEach(w => listDone.appendChild(buildWorkCard(w)));
+  }
+}
+
+function rerenderWork(workId) {
+  const work = STATE.works.find(w => w.workId === workId);
+  if (!work) return;
+  document.querySelectorAll(`.work-card[data-work-id="${workId}"]`)
+    .forEach(el => el.replaceWith(buildWorkCard(work)));
+  renderList();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EVENT DELEGATION
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('app').addEventListener('click', function(e) {
+
+  // Vote button
+  const vBtn = e.target.closest('.vote-btn');
+  if (vBtn) {
+    const workId = vBtn.dataset.workId;
+    const val    = parseInt(vBtn.dataset.vote);
+    const work   = STATE.works.find(w => w.workId === workId);
+    if (!work) return;
+    castVote(work, val);
+    rerenderWork(workId);
+    const lbl = VOTE_LABELS[val];
+    showToast(STATE.proxyUrl
+      ? `${lbl.charAt(0).toUpperCase()+lbl.slice(1)} — saving to sheet…`
+      : `${lbl.charAt(0).toUpperCase()+lbl.slice(1)} — saved locally`);
+    return;
+  }
+
+  // Thumbnail — swap hero image and open lightbox
+  const thumb = e.target.closest('.thumb');
+  if (thumb) {
+    const card = document.querySelector(`.work-card[data-work-id="${thumb.dataset.heroTarget}"]`);
+    if (card) {
+      const hero = card.querySelector('.work-hero');
+      if (hero) { hero.src = thumb.dataset.heroThumb; hero.dataset.full = thumb.dataset.heroFull; hero.dataset.caption = thumb.dataset.caption; }
+      card.querySelectorAll('.thumb').forEach(t => t.classList.remove('active-thumb'));
+      thumb.classList.add('active-thumb');
+    }
+    openLightbox(thumb.dataset.full, thumb.dataset.caption);
+    return;
+  }
+
+  // Hero tap → lightbox
+  const hero = e.target.closest('.work-hero');
+  if (hero) { openLightbox(hero.dataset.full, hero.dataset.caption); return; }
+
+  // Read more / less
+  const rmBtn = e.target.closest('.read-more');
+  if (rmBtn) {
+    const el = document.getElementById(rmBtn.dataset.desc);
+    const expanded = el.classList.toggle('expanded');
+    rmBtn.textContent = expanded ? 'Show less' : 'Read more';
+    return;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  LIGHTBOX
+// ═══════════════════════════════════════════════════════════════
+function openLightbox(src, caption) {
+  const img = document.getElementById('lb-img');
+  document.getElementById('lb-caption').textContent = caption || '';
+  img.style.opacity = '0';
+  document.getElementById('lightbox').classList.add('open');
+  img.src = src;
+  img.onload  = () => { img.style.opacity = '1'; };
+  img.onerror = () => { img.style.opacity = '1'; };
+}
+document.getElementById('lb-close').addEventListener('click', () =>
+  document.getElementById('lightbox').classList.remove('open'));
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['todo','done','settings'].forEach(t =>
+      document.getElementById(`panel-${t}`).style.display = t === tab ? '' : 'none');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════════════════
+function loginAs(sel) {
+  STATE.user = sel;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.flexDirection = 'column';
+  document.getElementById('topbar-name').textContent = sel.name;
+  loadLocal();
+  updateProxyUI();
+  renderList();
+  if (STATE.sheetId) autoLoadSheet();
+}
+
+document.getElementById('login-btn').addEventListener('click', () => {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pwd   = document.getElementById('login-pwd').value;
+  const sel   = SELECTORS.find(s => s.email === email && s.password === pwd);
+  if (!sel) { document.getElementById('login-error').textContent = 'Incorrect email or password.'; return; }
+  document.getElementById('login-error').textContent = '';
+  loginAs(sel);
+});
+document.getElementById('login-pwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('login-btn').click();
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  STATE.user = null; STATE.votes = {}; STATE.works = [];
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pwd').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('tab-todo').click();
+  try { sessionStorage.removeItem('cwc_session'); } catch(e) {}
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  SETTINGS HANDLERS
+// ═══════════════════════════════════════════════════════════════
+
+// Test & save proxy URL
+document.getElementById('test-proxy-btn').addEventListener('click', async () => {
+  const url = document.getElementById('proxy-url-input').value.trim();
+  if (!url) { showToast('Paste the Apps Script URL first'); return; }
+  const btn = document.getElementById('test-proxy-btn');
+  btn.textContent = 'Testing…'; btn.disabled = true;
+  try {
+    await testProxy(url);
+    STATE.proxyUrl = url;
+    saveLocal();
+    updateProxyUI();
+    showToast('Connected — write-back is active for all selectors');
+  } catch(e) {
+    showToast('Connection failed: ' + (e.message || '').slice(0, 70));
+    setSyncState('error', 'Not connected');
+  } finally {
+    btn.textContent = 'Save & Test Connection'; btn.disabled = false;
+  }
+});
+
+// Disconnect proxy
+document.getElementById('proxy-disconnect-btn').addEventListener('click', () => {
+  STATE.proxyUrl = '';
+  saveLocal();
+  document.getElementById('proxy-url-input').value = '';
+  updateProxyUI();
+  showToast('Write-back disconnected');
+});
+
+// Load sheet
+document.getElementById('load-sheet-btn').addEventListener('click', async () => {
+  const id = document.getElementById('sheet-id-input').value.trim();
+  if (!id) { showToast('Enter the Sheet ID first'); return; }
+  STATE.sheetId = id;
+  saveLocal();
+  await doLoadSheet();
+});
+
+// Demo data
+document.getElementById('demo-btn').addEventListener('click', () => {
+  STATE.works = parseDemoData();
+  renderList();
+  showToast('Demo data loaded');
+  document.getElementById('tab-todo').click();
+});
+
+async function autoLoadSheet() {
+  document.getElementById('sheet-id-input').value = STATE.sheetId;
+  try { await doLoadSheet(); } catch(e) { /* silent — user can retry */ }
+}
+
+async function doLoadSheet() {
+  const btn = document.getElementById('load-sheet-btn');
+  btn.textContent = 'Loading…'; btn.disabled = true;
+  try {
+    const works = await loadFromSheet(STATE.sheetId);
+    STATE.works = works;
+    renderList();
+    showToast(`Loaded ${works.length} works`);
+    document.getElementById('tab-todo').click();
+  } catch(err) {
+    showToast(err.message.slice(0, 90));
+  } finally {
+    btn.textContent = 'Load Entries from Sheet'; btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SESSION RESTORE
+// ═══════════════════════════════════════════════════════════════
+(function init() {
+  try {
+    const raw = sessionStorage.getItem('cwc_session');
+    if (raw) {
+      const { email } = JSON.parse(raw);
+      const sel = SELECTORS.find(s => s.email === email);
+      if (sel) { loginAs(sel); return; }
+    }
+  } catch(e) {}
+})();
+
+window.addEventListener('beforeunload', () => {
+  if (STATE.user) try { sessionStorage.setItem('cwc_session', JSON.stringify({ email: STATE.user.email })); } catch(e) {}
+});
+</script>
+</body>
+</html>
