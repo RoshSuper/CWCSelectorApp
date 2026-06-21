@@ -450,14 +450,22 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════
+//  DEFAULT CONFIGURATION
+//  Baked in so every selector connects automatically — no Settings
+//  step required on first use, on any device.
+// ═══════════════════════════════════════════════════════════════
+const DEFAULT_PROXY_URL = 'https://script.google.com/macros/s/AKfycbxpz1VM9GxrTg9VNaNoBcHSemL7re3GrTpuz-cB0A1oScIYbxylFEU5hwTiw-PkJ_ik/exec';
+const DEFAULT_SHEET_ID  = '1fNDySpInv55BzY0ME_1MZWKZY0jXLE6k5H-FNaAWs8c';
+
+// ═══════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════
 const STATE = {
   user:     null,   // { number, name, email, password, key }
   works:    [],     // flat array — one card per work
   votes:    {},     // { workId: 0|1|2 }
-  sheetId:  '',
-  proxyUrl: '',     // Apps Script Web App URL
+  sheetId:  DEFAULT_SHEET_ID,
+  proxyUrl: DEFAULT_PROXY_URL,     // Apps Script Web App URL
   syncQueue: [],
   syncing:   false,
 };
@@ -486,8 +494,8 @@ function saveLocal() {
 
 function loadLocal() {
   try {
-    STATE.sheetId  = localStorage.getItem('cwc_sheet_id')  || '';
-    STATE.proxyUrl = localStorage.getItem('cwc_proxy_url') || '';
+    STATE.sheetId  = localStorage.getItem('cwc_sheet_id')  || DEFAULT_SHEET_ID;
+    STATE.proxyUrl = localStorage.getItem('cwc_proxy_url') || DEFAULT_PROXY_URL;
     if (STATE.user) {
       const v = localStorage.getItem(`cwc_votes_${STATE.user.email}`);
       STATE.votes = v ? JSON.parse(v) : {};
