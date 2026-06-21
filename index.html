@@ -544,15 +544,16 @@ function updateProxyUI() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  READ FROM GOOGLE SHEETS  (public read via API key — no auth needed for viewing)
-//  Falls back to proxy read if sheet is private
+//  READ FROM GOOGLE SHEETS — Flattened_Entries format
+//  One row per work. Selector columns are detected dynamically.
+//  Falls back to public CSV read if the proxy isn't configured.
 // ═══════════════════════════════════════════════════════════════
+
+const ENTRIES_TAB   = 'Flattened_Entries';
+const SELECTORS_TAB = 'Selectors';
+
 async function loadFromSheet(sheetId) {
-  // We read via the Apps Script proxy so the sheet doesn't need to be public
-  if (STATE.proxyUrl) {
-    return loadViaProxy(sheetId);
-  }
-  // Fallback: public sheet read (sheet must be "anyone with link can view")
+  if (STATE.proxyUrl) return loadViaProxy(sheetId);
   return loadViaPublicApi(sheetId);
 }
 
@@ -562,22 +563,20 @@ async function loadViaProxy(sheetId) {
   if (!r.ok) throw new Error(`Proxy read error: HTTP ${r.status}`);
   const j = await r.json();
   if (j.status !== 'ok') throw new Error(j.error || 'Read failed');
-  if (j.selectors) {
-    SELECTORS = j.selectors;
-  }
-  return parseRows(j.rows, j.headers);
+  if (j.selectors) SELECTORS = j.selectors;
+  return parseFlattenedRows(j.rows, j.headers);
 }
 
 async function loadViaPublicApi(sheetId) {
-  // Uses a public read-only approach: export as CSV
+  // Uses a public read-only approach: export as CSV (sheet must be "anyone with link can view")
   const csvUrl = (tab) =>
     `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
 
   const [r1, r2] = await Promise.all([
-    fetch(csvUrl('Form Responses')),
-    fetch(csvUrl('Selectors')).catch(() => null),
+    fetch(csvUrl(ENTRIES_TAB)),
+    fetch(csvUrl(SELECTORS_TAB)).catch(() => null),
   ]);
-  if (!r1.ok) throw new Error(`Could not read sheet (HTTP ${r1.status}). Make sure it is shared as "Anyone with the link can view", or set up the Apps Script proxy.`);
+  if (!r1.ok) throw new Error(`Could not read "${ENTRIES_TAB}" tab (HTTP ${r1.status}). Make sure the sheet is shared as "Anyone with the link can view", or set up the Apps Script proxy.`);
 
   const csv1 = await r1.text();
   const csv2 = r2 && r2.ok ? await r2.text() : null;
@@ -589,14 +588,20 @@ async function loadViaPublicApi(sheetId) {
       const idx = k => sh.indexOf(k);
       SELECTORS = selRows.slice(1).map(row => {
         const num = parseInt(row[idx('SelectorNumber')]) || 0;
-        return { number:num, name:row[idx('Name')]||'', email:(row[idx('Email')]||'').toLowerCase().trim(), password:row[idx('Password')]||'', key:`Selector${num}Score` };
+        return {
+          number:   num,
+          name:     row[idx('Name')] || '',
+          email:    (row[idx('Email')] || '').toLowerCase().trim(),
+          password: row[idx('Password')] || '',
+          key:      `Selector${num}Score`,
+        };
       }).filter(s => s.number > 0);
     }
   }
 
   const rows = parseCSV(csv1);
   const headers = rows[0] || [];
-  return parseRows(rows.slice(1), headers);
+  return parseFlattenedRows(rows.slice(1), headers);
 }
 
 // Minimal CSV parser (handles quoted fields with commas/newlines)
@@ -620,39 +625,78 @@ function parseCSV(text) {
   return rows.filter(r => r.some(c => c.trim()));
 }
 
-function parseRows(dataRows, headers) {
-  const col = name => headers.indexOf(name);
+// Convert a Google "lh3.googleusercontent.com/d/FILE_ID" link (or an older
+// Drive "?id=" link) into thumb + full-res viewable URLs. The flattening
+// script outputs lh3 links; a size suffix is appended directly with "="
+function toImageUrls(raw) {
+  if (!raw) return null;
+  const url = raw.trim();
+  if (!url || url === '#VALUE!') return null;
 
-  function parseImages(raw) {
-    if (!raw) return [];
-    return raw.split(',').map(u => u.trim()).filter(Boolean).map(url => {
-      const m = url.match(/[?&/]id=([\w-]+)/);
-      if (m) return {
-        thumb: `https://drive.google.com/thumbnail?id=${m[1]}&sz=w600`,
-        full:  `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600`,
-      };
-      return { thumb: url, full: url };
-    });
+  // lh3.googleusercontent.com/d/FILE_ID
+  let m = url.match(/lh3\.googleusercontent\.com\/d\/([\w-]+)/);
+  if (m) {
+    const id = m[1];
+    return {
+      thumb: `https://lh3.googleusercontent.com/d/${id}=w500`,
+      full:  `https://lh3.googleusercontent.com/d/${id}=w1600`,
+    };
   }
+
+  // Older drive.google.com formats — keep supporting in case of mixed data
+  m = url.match(/[?&/]id=([\w-]+)/);
+  if (m) {
+    return {
+      thumb: `https://drive.google.com/thumbnail?id=${m[1]}&sz=w500`,
+      full:  `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600`,
+    };
+  }
+
+  // Fallback: use the URL as-is
+  return { thumb: url, full: url };
+}
+
+// Detect every "SelectorNScore" column present in the header row, in order.
+// This is what makes the selector count fully dynamic per exhibition.
+function detectSelectorScoreColumns(headers) {
+  return headers
+    .map((h, idx) => ({ h, idx }))
+    .filter(({ h }) => /^Selector\d+Score$/.test(h))
+    .sort((a, b) => parseInt(a.h.match(/\d+/)[0]) - parseInt(b.h.match(/\d+/)[0]));
+}
+
+// Flattened_Entries: one row = one work. Images come from Image1..Image5 columns.
+function parseFlattenedRows(dataRows, headers) {
+  const col = name => headers.indexOf(name);
+  const g = (row, name) => {
+    const v = row[col(name)];
+    return (v === undefined || v === null) ? '' : String(v).trim();
+  };
 
   const works = [];
   dataRows.forEach((row, ri) => {
-    const g = c => (row[col(c)] || '').trim();
-    const rowIndex = ri + 2; // sheet row (1-based; row 1 = header)
-    const category = g('Entry Awards Category');
-    for (let w = 1; w <= 3; w++) {
-      const title = g(`Entry ${w}: Title of Work`);
-      if (!title) continue;
-      works.push({
-        workId:    `${ri}_${w}`,
-        rowIndex,
-        category,
-        title,
-        description: g(`Entry ${w}: Description of Work & Artist Statement`),
-        dimensions:  g(`Entry ${w}: Dimensions (centimeters)`),
-        images:      parseImages(g(`Upload images of Entry ${w}`)),
-      });
+    const title = g(row, 'Title of Work');
+    if (!title) return; // skip blank rows
+
+    const rowIndex = ri + 2; // 1-based sheet row (row 1 = header)
+
+    const images = [];
+    for (let n = 1; n <= 5; n++) {
+      const urls = toImageUrls(g(row, `Image${n}`));
+      if (urls) images.push(urls);
     }
+
+    works.push({
+      workId:          `r${rowIndex}`,
+      rowIndex,
+      submitterNumber: g(row, 'SubmitterNumber'),
+      entryNumber:     g(row, 'Entry Number'),
+      category:        g(row, 'Entry Awards Category'),
+      title,
+      description: g(row, 'Description of Work & Artist Statement'),
+      dimensions:  g(row, 'Dimensions (centimeters)'),
+      images,
+    });
   });
   return works;
 }
@@ -676,28 +720,28 @@ function parseDemoData() {
   const pick = (n) => Array.from({length:n}, () => imgs[(i++)%imgs.length]);
 
   return [
-    { workId:'d0', rowIndex:2, category:'Established',  title:'Coastal Drift',
+    { workId:'d0', rowIndex:2, submitterNumber:'1', entryNumber:'1', category:'Established',  title:'Coastal Drift',
       description:'Wheel-thrown stoneware inspired by tidal pools along the Cape coastline. The surface texture uses a resist-slip technique with wax and oxide washes, fired to cone 10 reduction. The form references the pull and release of water on rock.',
       dimensions:'28 × 14 cm', images:pick(3) },
-    { workId:'d1', rowIndex:2, category:'Established',  title:'Vessel No. 7',
+    { workId:'d1', rowIndex:3, submitterNumber:'1', entryNumber:'2', category:'Established',  title:'Vessel No. 7',
       description:'Hand-built pinch pot series exploring negative space and the tension between interior and exterior. Unglazed terracotta with a burnished interior. Deliberate asymmetry reflects the impermanence of natural forms.',
       dimensions:'12 × 12 cm', images:pick(2) },
-    { workId:'d2', rowIndex:3, category:'New Signature', title:'Fynbos Form I',
+    { workId:'d2', rowIndex:4, submitterNumber:'2', entryNumber:'1', category:'New Signature', title:'Fynbos Form I',
       description:'Slab-built sculptural vessel decorated with botanical relief impressions of local fynbos — protea, pincushion, erica. High-fired porcelain with a matte ash glaze that pools beautifully in the impressed details.',
       dimensions:'34 × 22 cm', images:pick(3) },
-    { workId:'d3', rowIndex:4, category:'Established',  title:'Mountain Series: Rain',
+    { workId:'d3', rowIndex:5, submitterNumber:'3', entryNumber:'1', category:'Established',  title:'Mountain Series: Rain',
       description:'Thrown and altered stoneware referencing the profile of the Hex River Mountains after rain. Layered celadon and iron red oxides fired in reduction to cone 10.',
       dimensions:'18 × 24 cm', images:pick(2) },
-    { workId:'d4', rowIndex:4, category:'Established',  title:'Mountain Series: Mist',
+    { workId:'d4', rowIndex:6, submitterNumber:'3', entryNumber:'2', category:'Established',  title:'Mountain Series: Mist',
       description:'Companion piece to Rain. Same form language through a different atmospheric glaze — cool grey-blue layered shino fired in heavy reduction.',
       dimensions:'18 × 24 cm', images:pick(1) },
-    { workId:'d5', rowIndex:4, category:'Established',  title:'Mountain Series: Light',
+    { workId:'d5', rowIndex:7, submitterNumber:'3', entryNumber:'3', category:'Established',  title:'Mountain Series: Light',
       description:'Third in the series. Golden rutile glaze through cone 10 oxidation. The colour shifts from warm honey in direct light to deep amber in shadow.',
       dimensions:'18 × 24 cm', images:pick(2) },
-    { workId:'d6', rowIndex:5, category:'New Signature', title:'Ochre & Salt',
+    { workId:'d6', rowIndex:8, submitterNumber:'4', entryNumber:'1', category:'New Signature', title:'Ochre & Salt',
       description:'First work exhibited publicly. Influenced by West Coast ochre cliffs and Overberg salt pans. Soda-fired stoneware — the unpredictable flashing felt the right language for this landscape.',
       dimensions:'22 × 18 cm', images:pick(2) },
-    { workId:'d7', rowIndex:6, category:'Open',          title:'Untitled Bowl Series',
+    { workId:'d7', rowIndex:9, submitterNumber:'5', entryNumber:'1', category:'Open',          title:'Untitled Bowl Series',
       description:'Three nesting bowls exploring the relationship between use and contemplation. Thrown porcelain, oxidised copper glaze. Interiors are left deliberately raw to contrast with the polished rims.',
       dimensions:'Various, 8–22 cm ⌀', images:pick(1) },
   ];
